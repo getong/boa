@@ -120,10 +120,10 @@ impl CallFrame {
     ///     caller prologue    caller arguments   callee prologue   callee arguments
     ///   ┌─────────────────┐   ┌─────────┐   ┌─────────────────┐  ┌──────┐
     ///   ▼                 ▼   ▼         ▼   │                 ▼  ▼      ▼
-    /// | 0: undefined | 1: y | 2: 1 | 3: 2 | 4: undefined | 5: x | 6:  3  |
-    /// ▲                                   ▲                            ▲
-    /// │       caller register pointer ────┤                            │
-    /// │                                   │                callee register pointer
+    /// | 0: undefined | 1: y | 2: 1 | 3: 2 | 4: undefined | 5: x | 6:  3 |
+    /// ▲                                   ▲                             ▲
+    /// │       caller register pointer ────┤                             │
+    /// │                                   │                 callee register pointer
     /// │                             callee frame pointer
     /// │
     /// └─────  caller frame pointer

@@ -4,7 +4,7 @@ mod object_literal;
 mod unary;
 mod update;
 
-use super::{Access, Callable, NodeKind, Operand};
+use super::{Access, Callable, NodeKind, Operand, Operand2};
 use crate::{
     bytecompiler::{ByteCompiler, Literal},
     vm::{GeneratorResumeKind, Opcode},
@@ -93,7 +93,15 @@ impl ByteCompiler<'_> {
             }
             Expression::Unary(unary) => self.compile_unary(unary, use_expr),
             Expression::Update(update) => self.compile_update(update, use_expr),
-            Expression::Binary(binary) => self.compile_binary(binary, use_expr),
+            Expression::Binary(binary) => {
+                let reg = self.register_allocator.alloc();
+                let mut output = Operand2::Varying(reg.index());
+                let needs_use = self.compile_binary(binary, &mut output, use_expr);
+                if !needs_use {
+                    self.emit2(Opcode::PushFromRegister, &[Operand2::Varying(reg.index())]);
+                }
+                self.register_allocator.dealloc(reg);
+            }
             Expression::BinaryInPrivate(binary) => {
                 self.compile_binary_in_private(binary, use_expr);
             }

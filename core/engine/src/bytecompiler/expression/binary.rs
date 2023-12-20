@@ -3,10 +3,18 @@ use boa_ast::expression::operator::{
     Binary, BinaryInPrivate,
 };
 
-use crate::{bytecompiler::ByteCompiler, vm::Opcode};
+use crate::{
+    bytecompiler::{ByteCompiler, Operand2},
+    vm::Opcode,
+};
 
 impl ByteCompiler<'_> {
-    pub(crate) fn compile_binary(&mut self, binary: &Binary, use_expr: bool) {
+    pub(crate) fn compile_binary(
+        &mut self,
+        binary: &Binary,
+        output: &mut Operand2<'_>,
+        use_expr: bool,
+    ) -> bool {
         self.compile_expr(binary.lhs(), true);
         match binary.op() {
             BinaryOp::Arithmetic(op) => {
@@ -41,24 +49,72 @@ impl ByteCompiler<'_> {
             }
             BinaryOp::Relational(op) => {
                 self.compile_expr(binary.rhs(), true);
-                match op {
-                    RelationalOp::Equal => self.emit_opcode(Opcode::Eq),
-                    RelationalOp::NotEqual => self.emit_opcode(Opcode::NotEq),
-                    RelationalOp::StrictEqual => self.emit_opcode(Opcode::StrictEq),
-                    RelationalOp::StrictNotEqual => self.emit_opcode(Opcode::StrictNotEq),
-                    RelationalOp::GreaterThan => self.emit_opcode(Opcode::GreaterThan),
+                let needs_use = match op {
+                    RelationalOp::Equal => {
+                        self.emit_opcode(Opcode::Eq);
+                        true
+                    }
+                    RelationalOp::NotEqual => {
+                        self.emit_opcode(Opcode::NotEq);
+                        true
+                    }
+                    RelationalOp::StrictEqual => {
+                        let lhs = self.register_allocator.alloc();
+                        let rhs = self.register_allocator.alloc();
+                        self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
+                        self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
+                        self.emit2(
+                            Opcode::StrictEq,
+                            &[*output, Operand2::Register(&lhs), Operand2::Register(&rhs)],
+                        );
+                        self.register_allocator.dealloc(lhs);
+                        self.register_allocator.dealloc(rhs);
+                        false
+                    }
+                    RelationalOp::StrictNotEqual => {
+                        let lhs = self.register_allocator.alloc();
+                        let rhs = self.register_allocator.alloc();
+                        self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
+                        self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
+                        self.emit2(
+                            Opcode::StrictNotEq,
+                            &[*output, Operand2::Register(&lhs), Operand2::Register(&rhs)],
+                        );
+                        self.register_allocator.dealloc(lhs);
+                        self.register_allocator.dealloc(rhs);
+                        false
+                    }
+                    RelationalOp::GreaterThan => {
+                        self.emit_opcode(Opcode::GreaterThan);
+                        true
+                    }
                     RelationalOp::GreaterThanOrEqual => {
                         self.emit_opcode(Opcode::GreaterThanOrEq);
+                        true
                     }
-                    RelationalOp::LessThan => self.emit_opcode(Opcode::LessThan),
-                    RelationalOp::LessThanOrEqual => self.emit_opcode(Opcode::LessThanOrEq),
-                    RelationalOp::In => self.emit_opcode(Opcode::In),
-                    RelationalOp::InstanceOf => self.emit_opcode(Opcode::InstanceOf),
-                }
+                    RelationalOp::LessThan => {
+                        self.emit_opcode(Opcode::LessThan);
+                        true
+                    }
+                    RelationalOp::LessThanOrEqual => {
+                        self.emit_opcode(Opcode::LessThanOrEq);
+                        true
+                    }
+                    RelationalOp::In => {
+                        self.emit_opcode(Opcode::In);
+                        true
+                    }
+                    RelationalOp::InstanceOf => {
+                        self.emit_opcode(Opcode::InstanceOf);
+                        true
+                    }
+                };
 
-                if !use_expr {
+                if !use_expr && needs_use {
                     self.emit_opcode(Opcode::Pop);
                 }
+
+                return needs_use;
             }
             BinaryOp::Logical(op) => {
                 match op {
@@ -92,6 +148,7 @@ impl ByteCompiler<'_> {
                 }
             }
         };
+        true
     }
 
     pub(crate) fn compile_binary_in_private(&mut self, binary: &BinaryInPrivate, use_expr: bool) {

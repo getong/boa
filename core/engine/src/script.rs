@@ -125,6 +125,8 @@ impl Script {
             false,
             self.inner.realm.environment().compile_env(),
             self.inner.realm.environment().compile_env(),
+            false,
+            false,
             context,
         );
         // TODO: move to `Script::evaluate` to make this operation infallible.

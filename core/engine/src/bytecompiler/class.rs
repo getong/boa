@@ -54,6 +54,8 @@ impl ByteCompiler<'_> {
             self.json_parse,
             self.variable_environment.clone(),
             self.lexical_environment.clone(),
+            false,
+            false,
             self.context,
         );
 
@@ -83,7 +85,7 @@ impl ByteCompiler<'_> {
         } else {
             compiler.emit_opcode(Opcode::PushUndefined);
         }
-        compiler.emit_opcode(Opcode::SetReturnValue);
+        compiler.emit_opcode(Opcode::SetAccumulatorFromStack);
 
         // 17. If ClassHeritageopt is present, set F.[[ConstructorKind]] to derived.
         compiler.code_block_flags.set(
@@ -287,6 +289,8 @@ impl ByteCompiler<'_> {
                         self.json_parse,
                         self.variable_environment.clone(),
                         self.lexical_environment.clone(),
+                        false,
+                        false,
                         self.context,
                     );
 
@@ -297,7 +301,7 @@ impl ByteCompiler<'_> {
                     } else {
                         field_compiler.emit_opcode(Opcode::PushUndefined);
                     }
-                    field_compiler.emit_opcode(Opcode::SetReturnValue);
+                    field_compiler.emit_opcode(Opcode::SetAccumulatorFromStack);
 
                     field_compiler.code_block_flags |= CodeBlockFlags::IN_CLASS_FIELD_INITIALIZER;
 
@@ -315,6 +319,8 @@ impl ByteCompiler<'_> {
                         self.json_parse,
                         self.variable_environment.clone(),
                         self.lexical_environment.clone(),
+                        false,
+                        false,
                         self.context,
                     );
                     let _ = field_compiler.push_compile_environment(true);
@@ -323,7 +329,7 @@ impl ByteCompiler<'_> {
                     } else {
                         field_compiler.emit_opcode(Opcode::PushUndefined);
                     }
-                    field_compiler.emit_opcode(Opcode::SetReturnValue);
+                    field_compiler.emit_opcode(Opcode::SetAccumulatorFromStack);
 
                     field_compiler.code_block_flags |= CodeBlockFlags::IN_CLASS_FIELD_INITIALIZER;
 
@@ -353,6 +359,8 @@ impl ByteCompiler<'_> {
                         self.json_parse,
                         self.variable_environment.clone(),
                         self.lexical_environment.clone(),
+                        false,
+                        false,
                         self.context,
                     );
                     let _ = field_compiler.push_compile_environment(true);
@@ -361,7 +369,7 @@ impl ByteCompiler<'_> {
                     } else {
                         field_compiler.emit_opcode(Opcode::PushUndefined);
                     }
-                    field_compiler.emit_opcode(Opcode::SetReturnValue);
+                    field_compiler.emit_opcode(Opcode::SetAccumulatorFromStack);
 
                     field_compiler.code_block_flags |= CodeBlockFlags::IN_CLASS_FIELD_INITIALIZER;
 
@@ -387,6 +395,8 @@ impl ByteCompiler<'_> {
                         false,
                         self.variable_environment.clone(),
                         self.lexical_environment.clone(),
+                        false,
+                        false,
                         self.context,
                     );
                     let _ = compiler.push_compile_environment(true);

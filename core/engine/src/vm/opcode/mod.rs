@@ -94,7 +94,7 @@ pub(crate) use unary_ops::*;
 #[doc(inline)]
 pub(crate) use value::*;
 
-use super::{code_block::Readable, GeneratorResumeKind};
+use super::{code_block::Readable, GeneratorResumeKind, Vm};
 use thin_vec::ThinVec;
 
 /// Read type T from code.
@@ -923,21 +923,13 @@ generate_opcodes! {
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs `===` rhs)
-    StrictEq,
+    StrictEq { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `!=` operator.
-    ///
-    /// Operands:
-    ///
-    /// Stack: lhs, rhs **=>** (lhs `!=` rhs)
     NotEq,
 
     /// Binary `!==` operator.
-    ///
-    /// Operands:
-    ///
-    /// Stack: lhs, rhs **=>** (lhs `!==` rhs)
-    StrictNotEq,
+    StrictNotEq { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `>` operator.
     ///
@@ -1754,14 +1746,49 @@ generate_opcodes! {
     /// Operands:
     ///
     /// Stack: **=>** value
-    GetReturnValue,
+    GetAccumulator,
 
     /// Set return value of a function.
     ///
     /// Operands:
     ///
     /// Stack: value **=>**
-    SetReturnValue,
+    SetAccumulatorFromStack,
+
+    /// Set return value of a function.
+    ///
+    /// Operands:
+    ///
+    /// Stack: **=>**
+    SetAccumulator { register: VaryingOperand },
+
+    // Set return value of a function.
+    ///
+    /// Operands:
+    ///
+    /// Stack: **=>**
+    SetRegisterFromAccumulator { register: VaryingOperand },
+
+    /// Move value of operand `src` to register `dst`.
+    ///
+    /// Operands:
+    ///
+    /// Stack: **=>**
+    Move { dst: VaryingOperand, src: VaryingOperand },
+
+    /// Pop value from the stack and push to register `dst`
+    ///
+    /// Operands:
+    ///
+    /// Stack: value **=>**
+    PopIntoRegister { dst: VaryingOperand },
+
+    /// Copy value at register `src` and push it into the stack.
+    ///
+    /// Operands:
+    ///
+    /// Stack: **=>** value
+    PushFromRegister { src: VaryingOperand },
 
     /// Push a declarative environment.
     ///
@@ -2208,16 +2235,6 @@ generate_opcodes! {
     Reserved53 => Reserved,
     /// Reserved [`Opcode`].
     Reserved54 => Reserved,
-    /// Reserved [`Opcode`].
-    Reserved55 => Reserved,
-    /// Reserved [`Opcode`].
-    Reserved56 => Reserved,
-    /// Reserved [`Opcode`].
-    Reserved57 => Reserved,
-    /// Reserved [`Opcode`].
-    Reserved58 => Reserved,
-    /// Reserved [`Opcode`].
-    Reserved59 => Reserved,
 }
 
 /// Specific opcodes for bindings.
@@ -2294,3 +2311,63 @@ impl Iterator for InstructionIterator<'_> {
 }
 
 impl FusedIterator for InstructionIterator<'_> {}
+
+pub(crate) enum InstructionOperand {
+    Register { index: u32 },
+    Constant { value: u32 },
+    Argument { index: u32 },
+}
+
+impl From<u32> for InstructionOperand {
+    fn from(value: u32) -> Self {
+        let typ = (value & 0b11) as u8;
+        let value = value >> 2;
+        match typ {
+            0b00 => Self::Register { index: value },
+            0b01 => Self::Constant { value },
+            0b10 => Self::Argument { index: value },
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl From<u16> for InstructionOperand {
+    fn from(value: u16) -> Self {
+        let typ = (value & 0b11) as u8;
+        let value = u32::from(value >> 2);
+        match typ {
+            0b00 => Self::Register { index: value },
+            0b01 => Self::Constant { value },
+            0b10 => Self::Argument { index: value },
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl From<u8> for InstructionOperand {
+    fn from(value: u8) -> Self {
+        let typ = value & 0b11;
+        let value = u32::from(value >> 2);
+        match typ {
+            0b00 => Self::Register { index: value },
+            0b01 => Self::Constant { value },
+            0b10 => Self::Argument { index: value },
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl InstructionOperand {
+    pub(crate) fn to_value(&self, vm: &Vm) -> JsValue {
+        let rp = vm.frame().rp;
+        match self {
+            Self::Register { index } => vm.stack[(rp + index) as usize].clone(),
+            Self::Constant { value } => JsValue::from(*value),
+            Self::Argument { index } => vm
+                .frame()
+                .argument(*index as usize, vm)
+                .expect("there should be an argument")
+                .clone(),
+        }
+    }
+}

@@ -368,6 +368,16 @@ impl CodeBlock {
     /// Returns an empty `String` if no operands are present.
     pub(crate) fn instruction_operands(&self, instruction: &Instruction) -> String {
         match instruction {
+            Instruction::SetRegisterFromAccumulator { register }
+            | Instruction::SetAccumulator { register } => format!("R{}", register.value()),
+            Instruction::StrictNotEq { .. } | Instruction::StrictEq { .. } => {
+                "TODO: fix".to_string()
+            }
+            Instruction::PopIntoRegister { dst } => format!("R{}", dst.value()),
+            Instruction::PushFromRegister { src } => format!("R{}", src.value()),
+            Instruction::Move { dst: r1, src: r2 } => {
+                format!("{}, {}", r1.value(), r2.value())
+            }
             Instruction::SetFunctionName { prefix } => match prefix {
                 0 => "prefix: none",
                 1 => "prefix: get",
@@ -565,9 +575,7 @@ impl CodeBlock {
             | Instruction::BitNot
             | Instruction::In
             | Instruction::Eq
-            | Instruction::StrictEq
             | Instruction::NotEq
-            | Instruction::StrictNotEq
             | Instruction::GreaterThan
             | Instruction::GreaterThanOrEq
             | Instruction::LessThan
@@ -650,8 +658,8 @@ impl CodeBlock {
             | Instruction::SetNameByLocator
             | Instruction::PopPrivateEnvironment
             | Instruction::ImportCall
-            | Instruction::GetReturnValue
-            | Instruction::SetReturnValue
+            | Instruction::GetAccumulator
+            | Instruction::SetAccumulatorFromStack
             | Instruction::BindThisValue
             | Instruction::CreateMappedArgumentsObject
             | Instruction::CreateUnmappedArgumentsObject
@@ -712,12 +720,7 @@ impl CodeBlock {
             | Instruction::Reserved51
             | Instruction::Reserved52
             | Instruction::Reserved53
-            | Instruction::Reserved54
-            | Instruction::Reserved55
-            | Instruction::Reserved56
-            | Instruction::Reserved57
-            | Instruction::Reserved58
-            | Instruction::Reserved59 => unreachable!("Reserved opcodes are unrechable"),
+            | Instruction::Reserved54 => unreachable!("Reserved opcodes are unrechable"),
         }
     }
 }

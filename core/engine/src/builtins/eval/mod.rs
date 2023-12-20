@@ -235,6 +235,8 @@ impl Eval {
             false,
             var_env.clone(),
             context.vm.environments.current_compile_environment(),
+            false,
+            false,
             context,
         );
 

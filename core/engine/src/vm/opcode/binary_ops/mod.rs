@@ -1,7 +1,7 @@
 use crate::{
     error::JsNativeError,
     vm::{opcode::Operation, CompletionType},
-    Context, JsResult,
+    Context, JsResult, JsValue,
 };
 
 pub(crate) mod logical;
@@ -9,6 +9,8 @@ pub(crate) mod macro_defined;
 
 pub(crate) use logical::*;
 pub(crate) use macro_defined::*;
+
+use super::InstructionOperand;
 
 /// `NotEq` implements the Opcode Operation for `Opcode::NotEq`
 ///
@@ -38,16 +40,51 @@ impl Operation for NotEq {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct StrictEq;
 
+impl StrictEq {
+    #[allow(clippy::unnecessary_wraps)]
+    #[allow(clippy::needless_pass_by_value)]
+    fn operation(
+        output: u32,
+        lhs: InstructionOperand,
+        rhs: InstructionOperand,
+        context: &mut Context,
+    ) -> JsResult<CompletionType> {
+        let rp = context.vm.frame().rp;
+
+        let lhs = lhs.to_value(&context.vm);
+        let rhs = rhs.to_value(&context.vm);
+
+        let value = lhs.strict_equals(&rhs);
+
+        context.vm.stack[(rp + output) as usize] = JsValue::from(value);
+        Ok(CompletionType::Normal)
+    }
+}
+
 impl Operation for StrictEq {
     const NAME: &'static str = "StrictEq";
     const INSTRUCTION: &'static str = "INST - StrictEq";
     const COST: u8 = 2;
 
     fn execute(context: &mut Context) -> JsResult<CompletionType> {
-        let rhs = context.vm.pop();
-        let lhs = context.vm.pop();
-        context.vm.push(lhs.strict_equals(&rhs));
-        Ok(CompletionType::Normal)
+        let output = u32::from(context.vm.read::<u8>());
+        let lhs = InstructionOperand::from(context.vm.read::<u8>());
+        let rhs = InstructionOperand::from(context.vm.read::<u8>());
+        Self::operation(output, lhs, rhs, context)
+    }
+
+    fn execute_with_u16_operands(context: &mut Context) -> JsResult<CompletionType> {
+        let output = u32::from(context.vm.read::<u16>());
+        let lhs = InstructionOperand::from(context.vm.read::<u16>());
+        let rhs = InstructionOperand::from(context.vm.read::<u16>());
+        Self::operation(output, lhs, rhs, context)
+    }
+
+    fn execute_with_u32_operands(context: &mut Context) -> JsResult<CompletionType> {
+        let output = context.vm.read::<u32>();
+        let lhs = InstructionOperand::from(context.vm.read::<u32>());
+        let rhs = InstructionOperand::from(context.vm.read::<u32>());
+        Self::operation(output, lhs, rhs, context)
     }
 }
 
@@ -58,16 +95,51 @@ impl Operation for StrictEq {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct StrictNotEq;
 
+impl StrictNotEq {
+    #[allow(clippy::unnecessary_wraps)]
+    #[allow(clippy::needless_pass_by_value)]
+    fn operation(
+        output: u32,
+        lhs: InstructionOperand,
+        rhs: InstructionOperand,
+        context: &mut Context,
+    ) -> JsResult<CompletionType> {
+        let rp = context.vm.frame().rp;
+
+        let lhs = lhs.to_value(&context.vm);
+        let rhs = rhs.to_value(&context.vm);
+
+        let value = !lhs.strict_equals(&rhs);
+
+        context.vm.stack[(rp + output) as usize] = JsValue::from(value);
+        Ok(CompletionType::Normal)
+    }
+}
+
 impl Operation for StrictNotEq {
     const NAME: &'static str = "StrictNotEq";
     const INSTRUCTION: &'static str = "INST - StrictNotEq";
     const COST: u8 = 2;
 
     fn execute(context: &mut Context) -> JsResult<CompletionType> {
-        let rhs = context.vm.pop();
-        let lhs = context.vm.pop();
-        context.vm.push(!lhs.strict_equals(&rhs));
-        Ok(CompletionType::Normal)
+        let output = u32::from(context.vm.read::<u8>());
+        let lhs = InstructionOperand::from(context.vm.read::<u8>());
+        let rhs = InstructionOperand::from(context.vm.read::<u8>());
+        Self::operation(output, lhs, rhs, context)
+    }
+
+    fn execute_with_u16_operands(context: &mut Context) -> JsResult<CompletionType> {
+        let output = u32::from(context.vm.read::<u16>());
+        let lhs = InstructionOperand::from(context.vm.read::<u16>());
+        let rhs = InstructionOperand::from(context.vm.read::<u16>());
+        Self::operation(output, lhs, rhs, context)
+    }
+
+    fn execute_with_u32_operands(context: &mut Context) -> JsResult<CompletionType> {
+        let output = context.vm.read::<u32>();
+        let lhs = InstructionOperand::from(context.vm.read::<u32>());
+        let rhs = InstructionOperand::from(context.vm.read::<u32>());
+        Self::operation(output, lhs, rhs, context)
     }
 }
 

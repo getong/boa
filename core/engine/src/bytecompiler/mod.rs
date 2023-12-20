@@ -8,6 +8,7 @@ mod expression;
 mod function;
 mod jump_control;
 mod module;
+mod register;
 mod statement;
 mod utils;
 
@@ -18,8 +19,8 @@ use crate::{
     environments::{BindingLocator, BindingLocatorError, CompileTimeEnvironment},
     js_string,
     vm::{
-        BindingOpcode, CodeBlock, CodeBlockFlags, Constant, GeneratorResumeKind, Handler,
-        InlineCache, Opcode, VaryingOperandKind,
+        BindingOpcode, CallFrame, CodeBlock, CodeBlockFlags, Constant, GeneratorResumeKind,
+        Handler, InlineCache, Opcode, VaryingOperandKind,
     },
     Context, JsBigInt, JsString,
 };
@@ -44,6 +45,7 @@ use rustc_hash::FxHashMap;
 
 pub(crate) use function::FunctionCompiler;
 pub(crate) use jump_control::JumpControlInfo;
+pub(crate) use register::*;
 use thin_vec::ThinVec;
 
 pub(crate) trait ToJsString {
@@ -229,6 +231,15 @@ impl Access<'_> {
     }
 }
 
+// | 00 Register
+// | 01 Argements
+// | 10 Immediate
+// | 11 ???
+
+// 2^6 = 64
+//
+// 00 00 00 00
+
 /// An opcode operand.
 #[derive(Debug, Clone, Copy)]
 #[allow(unused)]
@@ -245,6 +256,23 @@ pub(crate) enum Operand {
     Varying(u32),
 }
 
+/// An opcode operand.
+#[derive(Debug, Clone, Copy)]
+#[allow(unused)]
+pub(crate) enum Operand2<'a> {
+    Bool(bool),
+    I8(i8),
+    U8(u8),
+    I16(i16),
+    U16(u16),
+    I32(i32),
+    U32(u32),
+    I64(i64),
+    U64(u64),
+    Varying(u32),
+    Register(&'a Reg),
+}
+
 /// The [`ByteCompiler`] is used to compile ECMAScript AST from [`boa_ast`] to bytecode.
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
@@ -255,7 +283,7 @@ pub struct ByteCompiler<'ctx> {
     /// The number of arguments expected.
     pub(crate) length: u32,
 
-    pub(crate) register_count: u32,
+    pub(crate) register_allocator: RegisterAllocator,
 
     /// \[\[ThisMode\]\]
     pub(crate) this_mode: ThisMode,
@@ -279,7 +307,7 @@ pub struct ByteCompiler<'ctx> {
 
     current_open_environments_count: u32,
     current_stack_value_count: u32,
-    pub(crate) code_block_flags: CodeBlockFlags,
+    code_block_flags: CodeBlockFlags,
     handlers: ThinVec<Handler>,
     pub(crate) ic: Vec<InlineCache>,
     literals_map: FxHashMap<Literal, u32>,
@@ -307,18 +335,53 @@ impl<'ctx> ByteCompiler<'ctx> {
 
     /// Creates a new [`ByteCompiler`].
     #[inline]
+    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::fn_params_excessive_bools)]
     pub(crate) fn new(
         name: JsString,
         strict: bool,
         json_parse: bool,
         variable_environment: Rc<CompileTimeEnvironment>,
         lexical_environment: Rc<CompileTimeEnvironment>,
+        is_async: bool,
+        is_generator: bool,
         // TODO: remove when we separate scripts from the context
         context: &'ctx mut Context,
     ) -> ByteCompiler<'ctx> {
         let mut code_block_flags = CodeBlockFlags::empty();
         code_block_flags.set(CodeBlockFlags::STRICT, strict);
+        code_block_flags.set(CodeBlockFlags::IS_ASYNC, is_async);
+        code_block_flags.set(CodeBlockFlags::IS_GENERATOR, is_generator);
         code_block_flags |= CodeBlockFlags::HAS_PROTOTYPE_PROPERTY;
+
+        let mut register_allocator = RegisterAllocator::default();
+        if is_async {
+            let promise_register = register_allocator.alloc_persistent();
+            let resolve_register = register_allocator.alloc_persistent();
+            let reject_register = register_allocator.alloc_persistent();
+
+            debug_assert_eq!(
+                promise_register.index(),
+                CallFrame::PROMISE_CAPABILITY_PROMISE_REGISTER_INDEX
+            );
+            debug_assert_eq!(
+                resolve_register.index(),
+                CallFrame::PROMISE_CAPABILITY_RESOLVE_REGISTER_INDEX
+            );
+            debug_assert_eq!(
+                reject_register.index(),
+                CallFrame::PROMISE_CAPABILITY_REJECT_REGISTER_INDEX
+            );
+
+            if is_generator {
+                let async_function_object_register = register_allocator.alloc_persistent();
+                debug_assert_eq!(
+                    async_function_object_register.index(),
+                    CallFrame::ASYNC_GENERATOR_OBJECT_REGISTER_INDEX
+                );
+            }
+        }
+
         Self {
             function_name: name,
             length: 0,
@@ -329,7 +392,7 @@ impl<'ctx> ByteCompiler<'ctx> {
             params: FormalParameterList::default(),
             current_open_environments_count: 0,
 
-            register_count: 0,
+            register_allocator,
             current_stack_value_count: 0,
             code_block_flags,
             handlers: ThinVec::default(),
@@ -504,6 +567,86 @@ impl<'ctx> ByteCompiler<'ctx> {
         }
     }
 
+    pub(crate) fn emit2(&mut self, opcode: Opcode, operands: &[Operand2<'_>]) {
+        let mut varying_kind = VaryingOperandKind::U8;
+        for operand in operands {
+            match *operand {
+                Operand2::Varying(operand) => {
+                    if u8::try_from(operand).is_ok() {
+                    } else if u16::try_from(operand).is_ok() {
+                        varying_kind = VaryingOperandKind::U16;
+                    } else {
+                        varying_kind = VaryingOperandKind::U32;
+                        break;
+                    }
+                }
+                Operand2::Register(operand) => {
+                    let operand = operand.index();
+                    if u8::try_from(operand).is_ok() && operand <= u32::from(2u8.pow(u8::BITS - 2))
+                    {
+                    } else if u16::try_from(operand).is_ok()
+                        && operand <= u32::from(2u16.pow(u16::BITS - 2))
+                    {
+                        varying_kind = VaryingOperandKind::U16;
+                    } else if operand <= 2u32.pow(u32::BITS - 2) {
+                        varying_kind = VaryingOperandKind::U32;
+                        break;
+                    } else {
+                        unreachable!("range must be number of bits - 2")
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        match varying_kind {
+            VaryingOperandKind::U8 => {}
+            VaryingOperandKind::U16 => self.emit_opcode(Opcode::U16Operands),
+            VaryingOperandKind::U32 => self.emit_opcode(Opcode::U32Operands),
+        }
+        self.emit_opcode(opcode);
+        for operand in operands {
+            self.emit_operand2(*operand, varying_kind);
+        }
+    }
+
+    pub(crate) fn emit_operand2(
+        &mut self,
+        operand: Operand2<'_>,
+        varying_kind: VaryingOperandKind,
+    ) {
+        match operand {
+            Operand2::Bool(v) => self.emit_u8(v.into()),
+            Operand2::I8(v) => self.emit_i8(v),
+            Operand2::U8(v) => self.emit_u8(v),
+            Operand2::I16(v) => self.emit_i16(v),
+            Operand2::U16(v) => self.emit_u16(v),
+            Operand2::I32(v) => self.emit_i32(v),
+            Operand2::U32(v) => self.emit_u32(v),
+            Operand2::I64(v) => self.emit_i64(v),
+            Operand2::U64(v) => self.emit_u64(v),
+            // Operand2::Varying(v) => match varying_kind {
+            //     VaryingOperandKind::U8 => self.emit_u8(((v as u8) << 2) | 1),
+            //     VaryingOperandKind::U16 => self.emit_u16(((v as u16) << 2) | 1),
+            //     VaryingOperandKind::U32 => self.emit_u32((v << 2) | 1),
+            // },
+            Operand2::Varying(v) => match varying_kind {
+                VaryingOperandKind::U8 => self.emit_u8(v as u8),
+                VaryingOperandKind::U16 => self.emit_u16(v as u16),
+                VaryingOperandKind::U32 => self.emit_u32(v),
+            },
+            Operand2::Register(reg) => {
+                let v = reg.index();
+                #[allow(clippy::identity_op)]
+                match varying_kind {
+                    VaryingOperandKind::U8 => self.emit_u8(((v as u8) << 2) | 0),
+                    VaryingOperandKind::U16 => self.emit_u16(((v as u16) << 2) | 0),
+                    VaryingOperandKind::U32 => self.emit_u32((v << 2) | 0),
+                }
+            }
+        }
+    }
+
     /// Emits an opcode with one varying operand.
     ///
     /// Simpler version of [`ByteCompiler::emit()`].
@@ -644,6 +787,13 @@ impl<'ctx> ByteCompiler<'ctx> {
                 self.emit(Opcode::PushDouble, &[Operand::U64(value.to_bits())]);
             }
         }
+    }
+
+    fn emit_move(&mut self, dst: &Reg, src: &Reg) {
+        self.emit2(
+            Opcode::Move,
+            &[Operand2::Varying(dst.index()), Operand2::Register(src)],
+        );
     }
 
     fn jump(&mut self) -> Label {
@@ -1523,25 +1673,15 @@ impl<'ctx> ByteCompiler<'ctx> {
         }
         self.r#return(false);
 
-        if self.is_async() {
-            // NOTE: +3 for the promise capability
-            self.register_count += 3;
-            if self.is_generator() {
-                // NOTE: +1 for the async generator function
-                self.register_count += 1;
-            }
-        }
-
-        // NOTE: Offset the handlers stack count so we don't pop the registers
-        //       when a exception is thrown.
+        let register_count = self.register_allocator.finish();
         for handler in &mut self.handlers {
-            handler.stack_count += self.register_count;
+            handler.stack_count += register_count;
         }
 
         CodeBlock {
             name: self.function_name,
             length: self.length,
-            register_count: self.register_count,
+            register_count,
             this_mode: self.this_mode,
             params: self.params,
             bytecode: self.bytecode.into_boxed_slice(),

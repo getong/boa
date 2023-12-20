@@ -28,7 +28,7 @@ use crate::{
     realm::Realm,
     vm::{
         create_function_object_fast, ActiveRunnable, CallFrame, CallFrameFlags, CodeBlock,
-        CodeBlockFlags, CompletionRecord, Opcode,
+        CompletionRecord, Opcode,
     },
     Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsString, JsValue, NativeFunction,
 };
@@ -1432,10 +1432,11 @@ impl SourceTextModule {
             false,
             env.clone(),
             env.clone(),
+            true,
+            false,
             context,
         );
 
-        compiler.code_block_flags |= CodeBlockFlags::IS_ASYNC;
         compiler.async_handler = Some(compiler.push_handler());
 
         let mut imports = Vec::new();

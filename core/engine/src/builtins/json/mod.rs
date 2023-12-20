@@ -118,6 +118,8 @@ impl Json {
                 true,
                 context.realm().environment().compile_env(),
                 context.realm().environment().compile_env(),
+                false,
+                false,
                 context,
             );
             compiler.compile_statement_list(script.statements(), true, false);

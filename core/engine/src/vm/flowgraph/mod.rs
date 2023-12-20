@@ -38,7 +38,14 @@ impl CodeBlock {
             let pc = iterator.pc();
 
             match instruction {
-                Instruction::SetFunctionName { .. } => {
+                Instruction::StrictEq { .. }
+                | Instruction::StrictNotEq { .. }
+                | Instruction::SetRegisterFromAccumulator { .. }
+                | Instruction::Move { .. }
+                | Instruction::PopIntoRegister { .. }
+                | Instruction::PushFromRegister { .. }
+                | Instruction::SetAccumulator { .. }
+                | Instruction::SetFunctionName { .. } => {
                     graph.add_node(previous_pc, NodeShape::None, label.into(), Color::None);
                     graph.add_edge(previous_pc, pc, None, Color::None, EdgeStyle::Line);
                 }
@@ -362,9 +369,7 @@ impl CodeBlock {
                 | Instruction::BitNot
                 | Instruction::In
                 | Instruction::Eq
-                | Instruction::StrictEq
                 | Instruction::NotEq
-                | Instruction::StrictNotEq
                 | Instruction::GreaterThan
                 | Instruction::GreaterThanOrEq
                 | Instruction::LessThan
@@ -440,8 +445,8 @@ impl CodeBlock {
                 | Instruction::PushObjectEnvironment
                 | Instruction::PopPrivateEnvironment
                 | Instruction::ImportCall
-                | Instruction::GetReturnValue
-                | Instruction::SetReturnValue
+                | Instruction::GetAccumulator
+                | Instruction::SetAccumulatorFromStack
                 | Instruction::Exception
                 | Instruction::MaybeException
                 | Instruction::CheckReturn
@@ -511,12 +516,7 @@ impl CodeBlock {
                 | Instruction::Reserved51
                 | Instruction::Reserved52
                 | Instruction::Reserved53
-                | Instruction::Reserved54
-                | Instruction::Reserved55
-                | Instruction::Reserved56
-                | Instruction::Reserved57
-                | Instruction::Reserved58
-                | Instruction::Reserved59 => unreachable!("Reserved opcodes are unrechable"),
+                | Instruction::Reserved54 => unreachable!("Reserved opcodes are unrechable"),
             }
         }
 
