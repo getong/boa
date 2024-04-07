@@ -19,17 +19,50 @@ use super::InstructionOperand;
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct NotEq;
 
+impl NotEq {
+    #[allow(clippy::needless_pass_by_value)]
+    fn operation(
+        output: u32,
+        lhs: InstructionOperand,
+        rhs: InstructionOperand,
+        context: &mut Context,
+    ) -> JsResult<CompletionType> {
+        let rp = context.vm.frame().rp;
+
+        let lhs = lhs.to_value(&context.vm);
+        let rhs = rhs.to_value(&context.vm);
+
+        let value = !lhs.equals(&rhs, context)?;
+
+        context.vm.stack[(rp + output) as usize] = JsValue::from(value);
+        Ok(CompletionType::Normal)
+    }
+}
+
 impl Operation for NotEq {
     const NAME: &'static str = "NotEq";
     const INSTRUCTION: &'static str = "INST - NotEq";
     const COST: u8 = 2;
 
     fn execute(context: &mut Context) -> JsResult<CompletionType> {
-        let rhs = context.vm.pop();
-        let lhs = context.vm.pop();
-        let value = !lhs.equals(&rhs, context)?;
-        context.vm.push(value);
-        Ok(CompletionType::Normal)
+        let output = u32::from(context.vm.read::<u8>());
+        let lhs = InstructionOperand::from(context.vm.read::<u8>());
+        let rhs = InstructionOperand::from(context.vm.read::<u8>());
+        Self::operation(output, lhs, rhs, context)
+    }
+
+    fn execute_with_u16_operands(context: &mut Context) -> JsResult<CompletionType> {
+        let output = u32::from(context.vm.read::<u16>());
+        let lhs = InstructionOperand::from(context.vm.read::<u16>());
+        let rhs = InstructionOperand::from(context.vm.read::<u16>());
+        Self::operation(output, lhs, rhs, context)
+    }
+
+    fn execute_with_u32_operands(context: &mut Context) -> JsResult<CompletionType> {
+        let output = context.vm.read::<u32>();
+        let lhs = InstructionOperand::from(context.vm.read::<u32>());
+        let rhs = InstructionOperand::from(context.vm.read::<u32>());
+        Self::operation(output, lhs, rhs, context)
     }
 }
 
@@ -150,14 +183,16 @@ impl Operation for StrictNotEq {
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct In;
 
-impl Operation for In {
-    const NAME: &'static str = "In";
-    const INSTRUCTION: &'static str = "INST - In";
-    const COST: u8 = 3;
-
-    fn execute(context: &mut Context) -> JsResult<CompletionType> {
-        let rhs = context.vm.pop();
-        let lhs = context.vm.pop();
+impl In {
+    #[allow(clippy::needless_pass_by_value)]
+    fn operation(
+        output: u32,
+        lhs: InstructionOperand,
+        rhs: InstructionOperand,
+        context: &mut Context,
+    ) -> JsResult<CompletionType> {
+        let rp = context.vm.frame().rp;
+        let rhs = rhs.to_value(&context.vm);
 
         let Some(rhs) = rhs.as_object() else {
             return Err(JsNativeError::typ()
@@ -167,10 +202,39 @@ impl Operation for In {
                 ))
                 .into());
         };
+
+        let lhs = lhs.to_value(&context.vm);
         let key = lhs.to_property_key(context)?;
         let value = rhs.has_property(key, context)?;
-        context.vm.push(value);
+        context.vm.stack[(rp + output) as usize] = JsValue::from(value);
         Ok(CompletionType::Normal)
+    }
+}
+
+impl Operation for In {
+    const NAME: &'static str = "In";
+    const INSTRUCTION: &'static str = "INST - In";
+    const COST: u8 = 3;
+
+    fn execute(context: &mut Context) -> JsResult<CompletionType> {
+        let output = u32::from(context.vm.read::<u8>());
+        let lhs = InstructionOperand::from(context.vm.read::<u8>());
+        let rhs = InstructionOperand::from(context.vm.read::<u8>());
+        Self::operation(output, lhs, rhs, context)
+    }
+
+    fn execute_with_u16_operands(context: &mut Context) -> JsResult<CompletionType> {
+        let output = u32::from(context.vm.read::<u16>());
+        let lhs = InstructionOperand::from(context.vm.read::<u16>());
+        let rhs = InstructionOperand::from(context.vm.read::<u16>());
+        Self::operation(output, lhs, rhs, context)
+    }
+
+    fn execute_with_u32_operands(context: &mut Context) -> JsResult<CompletionType> {
+        let output = context.vm.read::<u32>();
+        let lhs = InstructionOperand::from(context.vm.read::<u32>());
+        let rhs = InstructionOperand::from(context.vm.read::<u32>());
+        Self::operation(output, lhs, rhs, context)
     }
 }
 
@@ -228,27 +292,5 @@ impl Operation for InPrivate {
     fn execute_with_u32_operands(context: &mut Context) -> JsResult<CompletionType> {
         let index = context.vm.read::<u32>() as usize;
         Self::operation(context, index)
-    }
-}
-
-/// `InstanceOf` implements the Opcode Operation for `Opcode::InstanceOf`
-///
-/// Operation:
-///  - Binary `instanceof` operation
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct InstanceOf;
-
-impl Operation for InstanceOf {
-    const NAME: &'static str = "InstanceOf";
-    const INSTRUCTION: &'static str = "INST - InstanceOf";
-    const COST: u8 = 4;
-
-    fn execute(context: &mut Context) -> JsResult<CompletionType> {
-        let target = context.vm.pop();
-        let v = context.vm.pop();
-        let value = v.instance_of(&target, context)?;
-
-        context.vm.push(value);
-        Ok(CompletionType::Normal)
     }
 }

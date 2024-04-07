@@ -1,5 +1,5 @@
 use crate::{
-    bytecompiler::{Access, ByteCompiler, Operand, ToJsString},
+    bytecompiler::{Access, ByteCompiler, Operand, Operand2, ToJsString},
     environments::BindingLocatorError,
     vm::{BindingOpcode, Opcode},
 };
@@ -46,6 +46,24 @@ impl ByteCompiler<'_> {
                 AssignOp::Coalesce => Opcode::Coalesce,
             };
 
+            let emit_stack_opcode = |this: &mut ByteCompiler<'_>| {
+                let lhs = this.register_allocator.alloc();
+                let rhs = this.register_allocator.alloc();
+                this.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
+                this.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
+                this.emit2(
+                    opcode,
+                    &[
+                        Operand2::Varying(lhs.index()),
+                        Operand2::Register(&lhs),
+                        Operand2::Register(&rhs),
+                    ],
+                );
+                this.emit2(Opcode::PushFromRegister, &[Operand2::Varying(lhs.index())]);
+                this.register_allocator.dealloc(lhs);
+                this.register_allocator.dealloc(rhs);
+            };
+
             let short_circuit = matches!(
                 assign.op(),
                 AssignOp::BoolAnd | AssignOp::BoolOr | AssignOp::Coalesce
@@ -73,7 +91,7 @@ impl ByteCompiler<'_> {
                         self.compile_expr(assign.rhs(), true);
                     } else {
                         self.compile_expr(assign.rhs(), true);
-                        self.emit_opcode(opcode);
+                        emit_stack_opcode(self);
                     }
                     if use_expr {
                         self.emit_opcode(Opcode::Dup);
@@ -111,7 +129,7 @@ impl ByteCompiler<'_> {
                                 self.compile_expr(assign.rhs(), true);
                             } else {
                                 self.compile_expr(assign.rhs(), true);
-                                self.emit_opcode(opcode);
+                                emit_stack_opcode(self);
                             }
 
                             self.emit_set_property_by_name(*name);
@@ -133,7 +151,7 @@ impl ByteCompiler<'_> {
                                 self.compile_expr(assign.rhs(), true);
                             } else {
                                 self.compile_expr(assign.rhs(), true);
-                                self.emit_opcode(opcode);
+                                emit_stack_opcode(self);
                             }
 
                             self.emit_opcode(Opcode::SetPropertyByValue);
@@ -154,7 +172,7 @@ impl ByteCompiler<'_> {
                             self.compile_expr(assign.rhs(), true);
                         } else {
                             self.compile_expr(assign.rhs(), true);
-                            self.emit_opcode(opcode);
+                            emit_stack_opcode(self);
                         }
 
                         self.emit_with_varying_operand(Opcode::SetPrivateField, index);
@@ -177,7 +195,7 @@ impl ByteCompiler<'_> {
                                 self.compile_expr(assign.rhs(), true);
                             } else {
                                 self.compile_expr(assign.rhs(), true);
-                                self.emit_opcode(opcode);
+                                emit_stack_opcode(self);
                             }
 
                             self.emit_set_property_by_name(*name);
@@ -198,7 +216,7 @@ impl ByteCompiler<'_> {
                                 self.compile_expr(assign.rhs(), true);
                             } else {
                                 self.compile_expr(assign.rhs(), true);
-                                self.emit_opcode(opcode);
+                                emit_stack_opcode(self);
                             }
 
                             self.emit_opcode(Opcode::This);

@@ -370,9 +370,29 @@ impl CodeBlock {
         match instruction {
             Instruction::SetRegisterFromAccumulator { register }
             | Instruction::SetAccumulator { register } => format!("R{}", register.value()),
-            Instruction::StrictNotEq { .. } | Instruction::StrictEq { .. } => {
-                "TODO: fix".to_string()
-            }
+            Instruction::Add { .. }
+            | Instruction::Sub { .. }
+            | Instruction::Div { .. }
+            | Instruction::Mul { .. }
+            | Instruction::Mod { .. }
+            | Instruction::Pow { .. }
+            | Instruction::ShiftRight { .. }
+            | Instruction::ShiftLeft { .. }
+            | Instruction::UnsignedShiftRight { .. }
+            | Instruction::BitOr { .. }
+            | Instruction::BitAnd { .. }
+            | Instruction::BitXor { .. }
+            | Instruction::BitNot { .. }
+            | Instruction::In { .. }
+            | Instruction::Eq { .. }
+            | Instruction::NotEq { .. }
+            | Instruction::GreaterThan { .. }
+            | Instruction::GreaterThanOrEq { .. }
+            | Instruction::LessThan { .. }
+            | Instruction::LessThanOrEq { .. }
+            | Instruction::InstanceOf { .. }
+            | Instruction::StrictNotEq { .. }
+            | Instruction::StrictEq { .. } => "TODO: fix".to_string(),
             Instruction::PopIntoRegister { dst } => format!("R{}", dst.value()),
             Instruction::PushFromRegister { src } => format!("R{}", src.value()),
             Instruction::Move { dst: r1, src: r2 } => {
@@ -560,27 +580,6 @@ impl CodeBlock {
             | Instruction::PushClassPrototype
             | Instruction::SetClassPrototype
             | Instruction::SetHomeObject
-            | Instruction::Add
-            | Instruction::Sub
-            | Instruction::Div
-            | Instruction::Mul
-            | Instruction::Mod
-            | Instruction::Pow
-            | Instruction::ShiftRight
-            | Instruction::ShiftLeft
-            | Instruction::UnsignedShiftRight
-            | Instruction::BitOr
-            | Instruction::BitAnd
-            | Instruction::BitXor
-            | Instruction::BitNot
-            | Instruction::In
-            | Instruction::Eq
-            | Instruction::NotEq
-            | Instruction::GreaterThan
-            | Instruction::GreaterThanOrEq
-            | Instruction::LessThan
-            | Instruction::LessThanOrEq
-            | Instruction::InstanceOf
             | Instruction::TypeOf
             | Instruction::Void
             | Instruction::LogicalNot

@@ -16,105 +16,84 @@ impl ByteCompiler<'_> {
         use_expr: bool,
     ) -> bool {
         self.compile_expr(binary.lhs(), true);
+
         match binary.op() {
             BinaryOp::Arithmetic(op) => {
                 self.compile_expr(binary.rhs(), true);
-                match op {
-                    ArithmeticOp::Add => self.emit_opcode(Opcode::Add),
-                    ArithmeticOp::Sub => self.emit_opcode(Opcode::Sub),
-                    ArithmeticOp::Div => self.emit_opcode(Opcode::Div),
-                    ArithmeticOp::Mul => self.emit_opcode(Opcode::Mul),
-                    ArithmeticOp::Exp => self.emit_opcode(Opcode::Pow),
-                    ArithmeticOp::Mod => self.emit_opcode(Opcode::Mod),
-                }
 
-                if !use_expr {
-                    self.emit_opcode(Opcode::Pop);
-                }
+                let rhs = self.register_allocator.alloc();
+                let lhs = self.register_allocator.alloc();
+
+                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
+                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
+
+                let opcode = match op {
+                    ArithmeticOp::Add => Opcode::Add,
+                    ArithmeticOp::Sub => Opcode::Sub,
+                    ArithmeticOp::Div => Opcode::Div,
+                    ArithmeticOp::Mul => Opcode::Mul,
+                    ArithmeticOp::Exp => Opcode::Pow,
+                    ArithmeticOp::Mod => Opcode::Mod,
+                };
+
+                self.emit2(
+                    opcode,
+                    &[*output, Operand2::Register(&lhs), Operand2::Register(&rhs)],
+                );
+                self.register_allocator.dealloc(lhs);
+                self.register_allocator.dealloc(rhs);
             }
             BinaryOp::Bitwise(op) => {
                 self.compile_expr(binary.rhs(), true);
-                match op {
-                    BitwiseOp::And => self.emit_opcode(Opcode::BitAnd),
-                    BitwiseOp::Or => self.emit_opcode(Opcode::BitOr),
-                    BitwiseOp::Xor => self.emit_opcode(Opcode::BitXor),
-                    BitwiseOp::Shl => self.emit_opcode(Opcode::ShiftLeft),
-                    BitwiseOp::Shr => self.emit_opcode(Opcode::ShiftRight),
-                    BitwiseOp::UShr => self.emit_opcode(Opcode::UnsignedShiftRight),
-                }
 
-                if !use_expr {
-                    self.emit_opcode(Opcode::Pop);
-                }
+                let rhs = self.register_allocator.alloc();
+                let lhs = self.register_allocator.alloc();
+
+                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
+                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
+                let opcode = match op {
+                    BitwiseOp::And => Opcode::BitAnd,
+                    BitwiseOp::Or => Opcode::BitOr,
+                    BitwiseOp::Xor => Opcode::BitXor,
+                    BitwiseOp::Shl => Opcode::ShiftLeft,
+                    BitwiseOp::Shr => Opcode::ShiftRight,
+                    BitwiseOp::UShr => Opcode::UnsignedShiftRight,
+                };
+
+                self.emit2(
+                    opcode,
+                    &[*output, Operand2::Register(&lhs), Operand2::Register(&rhs)],
+                );
+                self.register_allocator.dealloc(lhs);
+                self.register_allocator.dealloc(rhs);
             }
             BinaryOp::Relational(op) => {
                 self.compile_expr(binary.rhs(), true);
-                let needs_use = match op {
-                    RelationalOp::Equal => {
-                        self.emit_opcode(Opcode::Eq);
-                        true
-                    }
-                    RelationalOp::NotEqual => {
-                        self.emit_opcode(Opcode::NotEq);
-                        true
-                    }
-                    RelationalOp::StrictEqual => {
-                        let lhs = self.register_allocator.alloc();
-                        let rhs = self.register_allocator.alloc();
-                        self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
-                        self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
-                        self.emit2(
-                            Opcode::StrictEq,
-                            &[*output, Operand2::Register(&lhs), Operand2::Register(&rhs)],
-                        );
-                        self.register_allocator.dealloc(lhs);
-                        self.register_allocator.dealloc(rhs);
-                        false
-                    }
-                    RelationalOp::StrictNotEqual => {
-                        let lhs = self.register_allocator.alloc();
-                        let rhs = self.register_allocator.alloc();
-                        self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
-                        self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
-                        self.emit2(
-                            Opcode::StrictNotEq,
-                            &[*output, Operand2::Register(&lhs), Operand2::Register(&rhs)],
-                        );
-                        self.register_allocator.dealloc(lhs);
-                        self.register_allocator.dealloc(rhs);
-                        false
-                    }
-                    RelationalOp::GreaterThan => {
-                        self.emit_opcode(Opcode::GreaterThan);
-                        true
-                    }
-                    RelationalOp::GreaterThanOrEqual => {
-                        self.emit_opcode(Opcode::GreaterThanOrEq);
-                        true
-                    }
-                    RelationalOp::LessThan => {
-                        self.emit_opcode(Opcode::LessThan);
-                        true
-                    }
-                    RelationalOp::LessThanOrEqual => {
-                        self.emit_opcode(Opcode::LessThanOrEq);
-                        true
-                    }
-                    RelationalOp::In => {
-                        self.emit_opcode(Opcode::In);
-                        true
-                    }
-                    RelationalOp::InstanceOf => {
-                        self.emit_opcode(Opcode::InstanceOf);
-                        true
-                    }
+
+                let rhs = self.register_allocator.alloc();
+                let lhs = self.register_allocator.alloc();
+
+                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
+                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
+                let opcode = match op {
+                    RelationalOp::Equal => Opcode::Eq,
+                    RelationalOp::NotEqual => Opcode::NotEq,
+                    RelationalOp::StrictEqual => Opcode::StrictEq,
+                    RelationalOp::StrictNotEqual => Opcode::StrictNotEq,
+                    RelationalOp::GreaterThan => Opcode::GreaterThan,
+                    RelationalOp::GreaterThanOrEqual => Opcode::GreaterThanOrEq,
+                    RelationalOp::LessThan => Opcode::LessThan,
+                    RelationalOp::LessThanOrEqual => Opcode::LessThanOrEq,
+                    RelationalOp::In => Opcode::In,
+                    RelationalOp::InstanceOf => Opcode::InstanceOf,
                 };
 
-                if !use_expr && needs_use {
-                    self.emit_opcode(Opcode::Pop);
-                }
-
-                return needs_use;
+                self.emit2(
+                    opcode,
+                    &[*output, Operand2::Register(&lhs), Operand2::Register(&rhs)],
+                );
+                self.register_allocator.dealloc(lhs);
+                self.register_allocator.dealloc(rhs);
             }
             BinaryOp::Logical(op) => {
                 match op {
@@ -138,6 +117,8 @@ impl ByteCompiler<'_> {
                 if !use_expr {
                     self.emit_opcode(Opcode::Pop);
                 }
+
+                return false;
             }
             BinaryOp::Comma => {
                 self.emit_opcode(Opcode::Pop);
@@ -146,8 +127,10 @@ impl ByteCompiler<'_> {
                 if !use_expr {
                     self.emit_opcode(Opcode::Pop);
                 }
+                return false;
             }
-        };
+        }
+
         true
     }
 

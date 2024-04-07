@@ -568,6 +568,10 @@ impl<'ctx> ByteCompiler<'ctx> {
     }
 
     pub(crate) fn emit2(&mut self, opcode: Opcode, operands: &[Operand2<'_>]) {
+        const MAX_U8: u8 = u8::MAX >> 2;
+        const MAX_U16: u16 = u16::MAX >> 2;
+        const MAX_U32: u32 = u32::MAX >> 2;
+
         let mut varying_kind = VaryingOperandKind::U8;
         for operand in operands {
             match *operand {
@@ -582,13 +586,10 @@ impl<'ctx> ByteCompiler<'ctx> {
                 }
                 Operand2::Register(operand) => {
                     let operand = operand.index();
-                    if u8::try_from(operand).is_ok() && operand <= u32::from(2u8.pow(u8::BITS - 2))
-                    {
-                    } else if u16::try_from(operand).is_ok()
-                        && operand <= u32::from(2u16.pow(u16::BITS - 2))
-                    {
+                    if u8::try_from(operand).is_ok() && operand <= u32::from(MAX_U8) {
+                    } else if u16::try_from(operand).is_ok() && operand <= u32::from(MAX_U16) {
                         varying_kind = VaryingOperandKind::U16;
-                    } else if operand <= 2u32.pow(u32::BITS - 2) {
+                    } else if operand <= MAX_U32 {
                         varying_kind = VaryingOperandKind::U32;
                         break;
                     } else {
@@ -639,9 +640,9 @@ impl<'ctx> ByteCompiler<'ctx> {
                 let v = reg.index();
                 #[allow(clippy::identity_op)]
                 match varying_kind {
-                    VaryingOperandKind::U8 => self.emit_u8(((v as u8) << 2) | 0),
-                    VaryingOperandKind::U16 => self.emit_u16(((v as u16) << 2) | 0),
-                    VaryingOperandKind::U32 => self.emit_u32((v << 2) | 0),
+                    VaryingOperandKind::U8 => self.emit_u8(((v as u8) << 2) | 0b00),
+                    VaryingOperandKind::U16 => self.emit_u16(((v as u16) << 2) | 0b00),
+                    VaryingOperandKind::U32 => self.emit_u32((v << 2) | 0b00),
                 }
             }
         }

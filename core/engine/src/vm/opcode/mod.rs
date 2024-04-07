@@ -811,98 +811,98 @@ generate_opcodes! {
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs + rhs)
-    Add,
+    Add { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `-` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs - rhs)
-    Sub,
+    Sub { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `/` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs / rhs)
-    Div,
+    Div { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `*` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs * rhs)
-    Mul,
+    Mul { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `%` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs % rhs)
-    Mod,
+    Mod { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `**` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs ** rhs)
-    Pow,
+    Pow { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `>>` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs >> rhs)
-    ShiftRight,
+    ShiftRight { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `<<` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** `(lhs << rhs)`
-    ShiftLeft,
+    ShiftLeft { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `>>>` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs >>> rhs)
-    UnsignedShiftRight,
+    UnsignedShiftRight { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary bitwise `|` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs | rhs)
-    BitOr,
+    BitOr { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary bitwise `&` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs & rhs)
-    BitAnd,
+    BitAnd { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary bitwise `^` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs ^ rhs)
-    BitXor,
+    BitXor { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Unary bitwise `~` operator.
     ///
     /// Operands:
     ///
     /// Stack: value **=>** ~value
-    BitNot,
+    BitNot { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `in` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs `in` rhs)
-    In,
+    In { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `in` operator for private names.
     ///
@@ -916,7 +916,7 @@ generate_opcodes! {
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs `==` rhs)
-    Eq,
+    Eq { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `===` operator.
     ///
@@ -926,7 +926,7 @@ generate_opcodes! {
     StrictEq { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `!=` operator.
-    NotEq,
+    NotEq { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `!==` operator.
     StrictNotEq { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
@@ -936,35 +936,35 @@ generate_opcodes! {
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs > rhs)
-    GreaterThan,
+    GreaterThan { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `>=` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs >= rhs)
-    GreaterThanOrEq,
+    GreaterThanOrEq { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `<` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** `(lhs < rhs)`
-    LessThan,
+    LessThan { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `<=` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** `(lhs <= rhs)`
-    LessThanOrEq,
+    LessThanOrEq { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary `instanceof` operator.
     ///
     /// Operands:
     ///
     /// Stack: lhs, rhs **=>** (lhs instanceof rhs)
-    InstanceOf,
+    InstanceOf { dst: VaryingOperand, lhs: VaryingOperand, rhs: VaryingOperand },
 
     /// Binary logical `&&` operator.
     ///

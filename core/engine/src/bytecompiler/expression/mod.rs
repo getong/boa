@@ -96,8 +96,8 @@ impl ByteCompiler<'_> {
             Expression::Binary(binary) => {
                 let reg = self.register_allocator.alloc();
                 let mut output = Operand2::Varying(reg.index());
-                let needs_use = self.compile_binary(binary, &mut output, use_expr);
-                if !needs_use {
+                let use_register = self.compile_binary(binary, &mut output, use_expr);
+                if use_register {
                     self.emit2(Opcode::PushFromRegister, &[Operand2::Varying(reg.index())]);
                 }
                 self.register_allocator.dealloc(reg);

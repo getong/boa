@@ -44,6 +44,27 @@ impl CodeBlock {
                 | Instruction::Move { .. }
                 | Instruction::PopIntoRegister { .. }
                 | Instruction::PushFromRegister { .. }
+                | Instruction::Add { .. }
+                | Instruction::Sub { .. }
+                | Instruction::Div { .. }
+                | Instruction::Mul { .. }
+                | Instruction::Mod { .. }
+                | Instruction::Pow { .. }
+                | Instruction::ShiftRight { .. }
+                | Instruction::ShiftLeft { .. }
+                | Instruction::UnsignedShiftRight { .. }
+                | Instruction::BitOr { .. }
+                | Instruction::BitAnd { .. }
+                | Instruction::BitXor { .. }
+                | Instruction::BitNot { .. }
+                | Instruction::In { .. }
+                | Instruction::Eq { .. }
+                | Instruction::NotEq { .. }
+                | Instruction::GreaterThan { .. }
+                | Instruction::GreaterThanOrEq { .. }
+                | Instruction::LessThan { .. }
+                | Instruction::LessThanOrEq { .. }
+                | Instruction::InstanceOf { .. }
                 | Instruction::SetAccumulator { .. }
                 | Instruction::SetFunctionName { .. } => {
                     graph.add_node(previous_pc, NodeShape::None, label.into(), Color::None);
@@ -354,27 +375,6 @@ impl CodeBlock {
                 | Instruction::PushClassPrototype
                 | Instruction::SetClassPrototype
                 | Instruction::SetHomeObject
-                | Instruction::Add
-                | Instruction::Sub
-                | Instruction::Div
-                | Instruction::Mul
-                | Instruction::Mod
-                | Instruction::Pow
-                | Instruction::ShiftRight
-                | Instruction::ShiftLeft
-                | Instruction::UnsignedShiftRight
-                | Instruction::BitOr
-                | Instruction::BitAnd
-                | Instruction::BitXor
-                | Instruction::BitNot
-                | Instruction::In
-                | Instruction::Eq
-                | Instruction::NotEq
-                | Instruction::GreaterThan
-                | Instruction::GreaterThanOrEq
-                | Instruction::LessThan
-                | Instruction::LessThanOrEq
-                | Instruction::InstanceOf
                 | Instruction::TypeOf
                 | Instruction::Void
                 | Instruction::LogicalNot
