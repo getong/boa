@@ -1492,7 +1492,13 @@ impl<'ctx> ByteCompiler<'ctx> {
         let name = function.name;
 
         let index = self.function(function);
-        self.emit_with_varying_operand(Opcode::GetFunction, index);
+        let dst = self.register_allocator.alloc();
+        self.emit2(
+            Opcode::GetFunction,
+            &[Operand2::Varying(dst.index()), Operand2::Varying(index)],
+        );
+        self.push_from_register(&dst);
+        self.register_allocator.dealloc(dst);
 
         match node_kind {
             NodeKind::Declaration => {
@@ -1554,7 +1560,13 @@ impl<'ctx> ByteCompiler<'ctx> {
             );
 
         let index = self.push_function_to_constants(code);
-        self.emit_with_varying_operand(Opcode::GetFunction, index);
+        let dst = self.register_allocator.alloc();
+        self.emit2(
+            Opcode::GetFunction,
+            &[Operand2::Varying(dst.index()), Operand2::Varying(index)],
+        );
+        self.push_from_register(&dst);
+        self.register_allocator.dealloc(dst);
     }
 
     /// Compile a class method AST Node into bytecode.
@@ -1601,7 +1613,13 @@ impl<'ctx> ByteCompiler<'ctx> {
             );
 
         let index = self.push_function_to_constants(code);
-        self.emit_with_varying_operand(Opcode::GetFunction, index);
+        let dst = self.register_allocator.alloc();
+        self.emit2(
+            Opcode::GetFunction,
+            &[Operand2::Varying(dst.index()), Operand2::Varying(index)],
+        );
+        self.push_from_register(&dst);
+        self.register_allocator.dealloc(dst);
     }
 
     fn call(&mut self, callable: Callable<'_>, use_expr: bool) {

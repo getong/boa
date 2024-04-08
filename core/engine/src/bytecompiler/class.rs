@@ -1,4 +1,4 @@
-use super::{ByteCompiler, Literal, Operand, ToJsString};
+use super::{ByteCompiler, Literal, Operand, Operand2, ToJsString};
 use crate::{
     js_string,
     vm::{BindingOpcode, CodeBlock, CodeBlockFlags, Opcode},
@@ -95,7 +95,14 @@ impl ByteCompiler<'_> {
 
         let code = Gc::new(compiler.finish());
         let index = self.push_function_to_constants(code);
-        self.emit_with_varying_operand(Opcode::GetFunction, index);
+
+        let dst = self.register_allocator.alloc();
+        self.emit2(
+            Opcode::GetFunction,
+            &[Operand2::Varying(dst.index()), Operand2::Varying(index)],
+        );
+        self.push_from_register(&dst);
+        self.register_allocator.dealloc(dst);
 
         self.emit_opcode(Opcode::Dup);
         if let Some(node) = class.super_ref() {
@@ -307,7 +314,15 @@ impl ByteCompiler<'_> {
 
                     let code = Gc::new(field_compiler.finish());
                     let index = self.push_function_to_constants(code);
-                    self.emit_with_varying_operand(Opcode::GetFunction, index);
+
+                    let dst = self.register_allocator.alloc();
+                    self.emit2(
+                        Opcode::GetFunction,
+                        &[Operand2::Varying(dst.index()), Operand2::Varying(index)],
+                    );
+                    self.push_from_register(&dst);
+                    self.register_allocator.dealloc(dst);
+
                     self.emit_opcode(Opcode::PushClassField);
                 }
                 ClassElement::PrivateFieldDefinition(name, field) => {
@@ -335,7 +350,13 @@ impl ByteCompiler<'_> {
 
                     let code = Gc::new(field_compiler.finish());
                     let index = self.push_function_to_constants(code);
-                    self.emit_with_varying_operand(Opcode::GetFunction, index);
+                    let dst = self.register_allocator.alloc();
+                    self.emit2(
+                        Opcode::GetFunction,
+                        &[Operand2::Varying(dst.index()), Operand2::Varying(index)],
+                    );
+                    self.push_from_register(&dst);
+                    self.register_allocator.dealloc(dst);
                     self.emit_with_varying_operand(Opcode::PushClassFieldPrivate, name_index);
                 }
                 ClassElement::StaticFieldDefinition(name, field) => {
@@ -560,7 +581,13 @@ impl ByteCompiler<'_> {
                 StaticElement::StaticBlock(code) => {
                     self.emit_opcode(Opcode::Dup);
                     let index = self.push_function_to_constants(code);
-                    self.emit_with_varying_operand(Opcode::GetFunction, index);
+                    let dst = self.register_allocator.alloc();
+                    self.emit2(
+                        Opcode::GetFunction,
+                        &[Operand2::Varying(dst.index()), Operand2::Varying(index)],
+                    );
+                    self.push_from_register(&dst);
+                    self.register_allocator.dealloc(dst);
                     self.emit_opcode(Opcode::SetHomeObject);
                     self.emit_with_varying_operand(Opcode::Call, 0);
                     self.emit_opcode(Opcode::Pop);
@@ -569,7 +596,13 @@ impl ByteCompiler<'_> {
                     self.emit_opcode(Opcode::Dup);
                     self.emit_opcode(Opcode::Dup);
                     let index = self.push_function_to_constants(code);
-                    self.emit_with_varying_operand(Opcode::GetFunction, index);
+                    let dst = self.register_allocator.alloc();
+                    self.emit2(
+                        Opcode::GetFunction,
+                        &[Operand2::Varying(dst.index()), Operand2::Varying(index)],
+                    );
+                    self.push_from_register(&dst);
+                    self.register_allocator.dealloc(dst);
                     self.emit_opcode(Opcode::SetHomeObject);
                     self.emit_with_varying_operand(Opcode::Call, 0);
                     if let Some(name_index) = name_index {
