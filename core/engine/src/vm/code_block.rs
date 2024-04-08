@@ -392,7 +392,8 @@ impl CodeBlock {
             | Instruction::LessThanOrEq { .. }
             | Instruction::InstanceOf { .. }
             | Instruction::StrictNotEq { .. }
-            | Instruction::StrictEq { .. } => "TODO: fix".to_string(),
+            | Instruction::StrictEq { .. }
+            | Instruction::InPrivate { .. } => "TODO: fix".to_string(),
             Instruction::PopIntoRegister { dst } => format!("R{}", dst.value()),
             Instruction::PushFromRegister { src } => format!("R{}", src.value()),
             Instruction::Move { dst: r1, src: r2 } => {
@@ -507,7 +508,6 @@ impl CodeBlock {
             | Instruction::SetPropertySetterByName { index }
             | Instruction::DefineClassStaticSetterByName { index }
             | Instruction::DefineClassSetterByName { index }
-            | Instruction::InPrivate { index }
             | Instruction::ThrowMutateImmutable { index }
             | Instruction::DeletePropertyByName { index }
             | Instruction::SetPrivateField { index }

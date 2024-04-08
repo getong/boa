@@ -4,7 +4,7 @@ use boa_ast::expression::operator::{
 };
 
 use crate::{
-    bytecompiler::{ByteCompiler, Operand2},
+    bytecompiler::{ByteCompiler, Operand2, Reg},
     vm::Opcode,
 };
 
@@ -114,13 +114,17 @@ impl ByteCompiler<'_> {
         }
     }
 
-    pub(crate) fn compile_binary_in_private(&mut self, binary: &BinaryInPrivate, use_expr: bool) {
+    pub(crate) fn compile_binary_in_private(&mut self, binary: &BinaryInPrivate, dst: &Reg) {
         let index = self.get_or_insert_private_name(*binary.lhs());
         self.compile_expr(binary.rhs(), true);
-        self.emit_with_varying_operand(Opcode::InPrivate, index);
-
-        if !use_expr {
-            self.emit_opcode(Opcode::Pop);
-        }
+        self.pop_into_register(dst);
+        self.emit2(
+            Opcode::InPrivate,
+            &[
+                Operand2::Varying(dst.index()),
+                Operand2::Varying(index),
+                Operand2::Register(dst),
+            ],
+        );
     }
 }

@@ -246,9 +246,15 @@ impl Operation for In {
 pub(crate) struct InPrivate;
 
 impl InPrivate {
-    fn operation(context: &mut Context, index: usize) -> JsResult<CompletionType> {
+    #[allow(clippy::needless_pass_by_value)]
+    fn operation(
+        context: &mut Context,
+        dst: u32,
+        index: usize,
+        rhs: InstructionOperand,
+    ) -> JsResult<CompletionType> {
         let name = context.vm.frame().code_block().constant_string(index);
-        let rhs = context.vm.pop();
+        let rhs = rhs.to_value(&context.vm);
 
         let Some(rhs) = rhs.as_object() else {
             return Err(JsNativeError::typ()
@@ -265,11 +271,10 @@ impl InPrivate {
             .resolve_private_identifier(name)
             .expect("private name must be in environment");
 
-        if rhs.private_element_find(&name, true, true).is_some() {
-            context.vm.push(true);
-        } else {
-            context.vm.push(false);
-        }
+        let value = rhs.private_element_find(&name, true, true).is_some();
+
+        let rp = context.vm.frame().rp;
+        context.vm.stack[(rp + dst) as usize] = JsValue::from(value);
         Ok(CompletionType::Normal)
     }
 }
@@ -280,17 +285,23 @@ impl Operation for InPrivate {
     const COST: u8 = 4;
 
     fn execute(context: &mut Context) -> JsResult<CompletionType> {
+        let dst = u32::from(context.vm.read::<u8>());
         let index = context.vm.read::<u8>() as usize;
-        Self::operation(context, index)
+        let rhs = InstructionOperand::from(context.vm.read::<u8>());
+        Self::operation(context, dst, index, rhs)
     }
 
     fn execute_with_u16_operands(context: &mut Context) -> JsResult<CompletionType> {
+        let dst = u32::from(context.vm.read::<u16>());
         let index = context.vm.read::<u16>() as usize;
-        Self::operation(context, index)
+        let rhs = InstructionOperand::from(context.vm.read::<u16>());
+        Self::operation(context, dst, index, rhs)
     }
 
     fn execute_with_u32_operands(context: &mut Context) -> JsResult<CompletionType> {
+        let dst = context.vm.read::<u32>();
         let index = context.vm.read::<u32>() as usize;
-        Self::operation(context, index)
+        let rhs = InstructionOperand::from(context.vm.read::<u32>());
+        Self::operation(context, dst, index, rhs)
     }
 }
