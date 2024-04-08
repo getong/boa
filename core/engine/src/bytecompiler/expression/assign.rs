@@ -46,11 +46,19 @@ impl ByteCompiler<'_> {
                 AssignOp::Coalesce => Opcode::Coalesce,
             };
 
+            let short_circuit = matches!(
+                assign.op(),
+                AssignOp::BoolAnd | AssignOp::BoolOr | AssignOp::Coalesce
+            );
+            let mut pop_count = 0;
+            let mut early_exit = None;
+
+            let lhs = self.register_allocator.alloc();
+
             let emit_stack_opcode = |this: &mut ByteCompiler<'_>| {
-                let lhs = this.register_allocator.alloc();
                 let rhs = this.register_allocator.alloc();
-                this.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
-                this.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
+                this.pop_into_register(&rhs);
+                this.pop_into_register(&lhs);
                 this.emit2(
                     opcode,
                     &[
@@ -59,17 +67,10 @@ impl ByteCompiler<'_> {
                         Operand2::Register(&rhs),
                     ],
                 );
-                this.emit2(Opcode::PushFromRegister, &[Operand2::Varying(lhs.index())]);
-                this.register_allocator.dealloc(lhs);
                 this.register_allocator.dealloc(rhs);
-            };
 
-            let short_circuit = matches!(
-                assign.op(),
-                AssignOp::BoolAnd | AssignOp::BoolOr | AssignOp::Coalesce
-            );
-            let mut pop_count = 0;
-            let mut early_exit = None;
+                this.push_from_register(&lhs);
+            };
 
             match access {
                 Access::Variable { name } => {
@@ -87,15 +88,23 @@ impl ByteCompiler<'_> {
                     }
 
                     if short_circuit {
-                        early_exit = Some(self.emit_opcode_with_operand(opcode));
+                        self.pop_into_register(&lhs);
+                        early_exit = Some(
+                            self.emit_opcode_with_operand2(opcode, Operand2::Varying(lhs.index())),
+                        );
                         self.compile_expr(assign.rhs(), true);
+
+                        self.pop_into_register(&lhs);
+                        self.push_from_register(&lhs);
                     } else {
                         self.compile_expr(assign.rhs(), true);
                         emit_stack_opcode(self);
                     }
+
                     if use_expr {
                         self.emit_opcode(Opcode::Dup);
                     }
+
                     if binding.is_lexical() {
                         match self.lexical_environment.set_mutable_binding(name.clone()) {
                             Ok(binding) => {
@@ -123,16 +132,24 @@ impl ByteCompiler<'_> {
                             self.emit_opcode(Opcode::Dup);
 
                             self.emit_get_property_by_name(*name);
+
                             if short_circuit {
                                 pop_count = 2;
-                                early_exit = Some(self.emit_opcode_with_operand(opcode));
+                                self.pop_into_register(&lhs);
+                                early_exit = Some(self.emit_opcode_with_operand2(
+                                    opcode,
+                                    Operand2::Varying(lhs.index()),
+                                ));
                                 self.compile_expr(assign.rhs(), true);
+                                self.pop_into_register(&lhs);
+                                self.push_from_register(&lhs);
                             } else {
                                 self.compile_expr(assign.rhs(), true);
                                 emit_stack_opcode(self);
                             }
 
                             self.emit_set_property_by_name(*name);
+
                             if !use_expr {
                                 self.emit_opcode(Opcode::Pop);
                             }
@@ -147,8 +164,15 @@ impl ByteCompiler<'_> {
                             self.emit_opcode(Opcode::GetPropertyByValuePush);
                             if short_circuit {
                                 pop_count = 3;
-                                early_exit = Some(self.emit_opcode_with_operand(opcode));
+
+                                self.pop_into_register(&lhs);
+                                early_exit = Some(self.emit_opcode_with_operand2(
+                                    opcode,
+                                    Operand2::Varying(lhs.index()),
+                                ));
                                 self.compile_expr(assign.rhs(), true);
+                                self.pop_into_register(&lhs);
+                                self.push_from_register(&lhs);
                             } else {
                                 self.compile_expr(assign.rhs(), true);
                                 emit_stack_opcode(self);
@@ -168,8 +192,16 @@ impl ByteCompiler<'_> {
                         self.emit_with_varying_operand(Opcode::GetPrivateField, index);
                         if short_circuit {
                             pop_count = 1;
-                            early_exit = Some(self.emit_opcode_with_operand(opcode));
+
+                            self.pop_into_register(&lhs);
+                            early_exit =
+                                Some(self.emit_opcode_with_operand2(
+                                    opcode,
+                                    Operand2::Varying(lhs.index()),
+                                ));
                             self.compile_expr(assign.rhs(), true);
+                            self.pop_into_register(&lhs);
+                            self.push_from_register(&lhs);
                         } else {
                             self.compile_expr(assign.rhs(), true);
                             emit_stack_opcode(self);
@@ -191,8 +223,15 @@ impl ByteCompiler<'_> {
                             self.emit_get_property_by_name(*name);
                             if short_circuit {
                                 pop_count = 2;
-                                early_exit = Some(self.emit_opcode_with_operand(opcode));
+
+                                self.pop_into_register(&lhs);
+                                early_exit = Some(self.emit_opcode_with_operand2(
+                                    opcode,
+                                    Operand2::Varying(lhs.index()),
+                                ));
                                 self.compile_expr(assign.rhs(), true);
+                                self.pop_into_register(&lhs);
+                                self.push_from_register(&lhs);
                             } else {
                                 self.compile_expr(assign.rhs(), true);
                                 emit_stack_opcode(self);
@@ -212,8 +251,15 @@ impl ByteCompiler<'_> {
                             self.emit_opcode(Opcode::GetPropertyByValuePush);
                             if short_circuit {
                                 pop_count = 2;
-                                early_exit = Some(self.emit_opcode_with_operand(opcode));
+
+                                self.pop_into_register(&lhs);
+                                early_exit = Some(self.emit_opcode_with_operand2(
+                                    opcode,
+                                    Operand2::Varying(lhs.index()),
+                                ));
                                 self.compile_expr(assign.rhs(), true);
+                                self.pop_into_register(&lhs);
+                                self.push_from_register(&lhs);
                             } else {
                                 self.compile_expr(assign.rhs(), true);
                                 emit_stack_opcode(self);
@@ -233,18 +279,19 @@ impl ByteCompiler<'_> {
             }
 
             if let Some(early_exit) = early_exit {
-                if pop_count == 0 {
-                    self.patch_jump(early_exit);
-                } else {
-                    let exit = self.emit_opcode_with_operand(Opcode::Jump);
-                    self.patch_jump(early_exit);
-                    for _ in 0..pop_count {
-                        self.emit_opcode(Opcode::Swap);
-                        self.emit_opcode(Opcode::Pop);
-                    }
-                    self.patch_jump(exit);
+                let exit = self.emit_opcode_with_operand(Opcode::Jump);
+
+                self.patch_jump(early_exit);
+                self.emit2(Opcode::PushFromRegister, &[Operand2::Varying(lhs.index())]);
+
+                for _ in 0..pop_count {
+                    self.emit_opcode(Opcode::Swap);
+                    self.emit_opcode(Opcode::Pop);
                 }
+                self.patch_jump(exit);
             }
+
+            self.register_allocator.dealloc(lhs);
         }
     }
 }

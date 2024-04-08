@@ -973,7 +973,7 @@ generate_opcodes! {
     /// Operands: exit: `u32`
     ///
     /// Stack: lhs, rhs **=>** (lhs && rhs)
-    LogicalAnd { exit: u32 },
+    LogicalAnd { exit: u32, lhs: VaryingOperand },
 
     /// Binary logical `||` operator.
     ///
@@ -982,7 +982,7 @@ generate_opcodes! {
     /// Operands: exit: `u32`
     ///
     /// Stack: lhs, rhs **=>** (lhs || rhs)
-    LogicalOr { exit: u32 },
+    LogicalOr { exit: u32, lhs: VaryingOperand },
 
     /// Binary `??` operator.
     ///
@@ -992,7 +992,7 @@ generate_opcodes! {
     /// Operands: exit: `u32`
     ///
     /// Stack: lhs, rhs **=>** (lhs ?? rhs)
-    Coalesce { exit: u32 },
+    Coalesce { exit: u32, lhs: VaryingOperand },
 
     /// Unary `typeof` operator.
     ///

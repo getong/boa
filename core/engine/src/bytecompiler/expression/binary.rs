@@ -9,12 +9,7 @@ use crate::{
 };
 
 impl ByteCompiler<'_> {
-    pub(crate) fn compile_binary(
-        &mut self,
-        binary: &Binary,
-        output: &mut Operand2<'_>,
-        use_expr: bool,
-    ) -> bool {
+    pub(crate) fn compile_binary(&mut self, binary: &Binary, output: &mut Operand2<'_>) {
         self.compile_expr(binary.lhs(), true);
 
         match binary.op() {
@@ -95,42 +90,28 @@ impl ByteCompiler<'_> {
                 self.register_allocator.dealloc(rhs);
             }
             BinaryOp::Logical(op) => {
-                match op {
-                    LogicalOp::And => {
-                        let exit = self.emit_opcode_with_operand(Opcode::LogicalAnd);
-                        self.compile_expr(binary.rhs(), true);
-                        self.patch_jump(exit);
-                    }
-                    LogicalOp::Or => {
-                        let exit = self.emit_opcode_with_operand(Opcode::LogicalOr);
-                        self.compile_expr(binary.rhs(), true);
-                        self.patch_jump(exit);
-                    }
-                    LogicalOp::Coalesce => {
-                        let exit = self.emit_opcode_with_operand(Opcode::Coalesce);
-                        self.compile_expr(binary.rhs(), true);
-                        self.patch_jump(exit);
-                    }
+                let Operand2::Varying(_) = *output else {
+                    unreachable!()
+                };
+                self.emit2(Opcode::PopIntoRegister, &[*output]);
+
+                let opcode = match op {
+                    LogicalOp::And => Opcode::LogicalAnd,
+                    LogicalOp::Or => Opcode::LogicalOr,
+                    LogicalOp::Coalesce => Opcode::Coalesce,
                 };
 
-                if !use_expr {
-                    self.emit_opcode(Opcode::Pop);
-                }
-
-                return false;
+                let exit = self.emit_opcode_with_operand2(opcode, *output);
+                self.compile_expr(binary.rhs(), true);
+                self.emit2(Opcode::PopIntoRegister, &[*output]);
+                self.patch_jump(exit);
             }
             BinaryOp::Comma => {
                 self.emit_opcode(Opcode::Pop);
                 self.compile_expr(binary.rhs(), true);
-
-                if !use_expr {
-                    self.emit_opcode(Opcode::Pop);
-                }
-                return false;
+                self.emit2(Opcode::PopIntoRegister, &[*output]);
             }
         }
-
-        true
     }
 
     pub(crate) fn compile_binary_in_private(&mut self, binary: &BinaryInPrivate, use_expr: bool) {

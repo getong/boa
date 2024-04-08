@@ -434,10 +434,10 @@ impl CodeBlock {
             | Instruction::JumpIfNotUndefined { address: value }
             | Instruction::JumpIfNullOrUndefined { address: value }
             | Instruction::Case { address: value }
-            | Instruction::Default { address: value }
-            | Instruction::LogicalAnd { exit: value }
-            | Instruction::LogicalOr { exit: value }
-            | Instruction::Coalesce { exit: value } => value.to_string(),
+            | Instruction::Default { address: value } => value.to_string(),
+            Instruction::LogicalAnd { exit, lhs: _ }
+            | Instruction::LogicalOr { exit, lhs: _ }
+            | Instruction::Coalesce { exit, lhs: _ } => format!("exit: {exit}, TODO: lhs"),
             Instruction::CallEval {
                 argument_count: value,
             }

@@ -799,6 +799,7 @@ impl<'ctx> ByteCompiler<'ctx> {
         }
     }
 
+    #[allow(dead_code)]
     fn emit_move(&mut self, dst: &Reg, src: &Reg) {
         self.emit2(
             Opcode::Move,
@@ -858,6 +859,12 @@ impl<'ctx> ByteCompiler<'ctx> {
     pub(crate) fn emit_opcode_with_operand(&mut self, opcode: Opcode) -> Label {
         let index = self.next_opcode_location();
         self.emit(opcode, &[Operand::U32(Self::DUMMY_ADDRESS)]);
+        Label { index }
+    }
+
+    pub(crate) fn emit_opcode_with_operand2(&mut self, opcode: Opcode, src: Operand2<'_>) -> Label {
+        let index = self.next_opcode_location();
+        self.emit2(opcode, &[Operand2::U32(Self::DUMMY_ADDRESS), src]);
         Label { index }
     }
 
