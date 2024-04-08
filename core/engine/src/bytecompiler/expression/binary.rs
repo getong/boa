@@ -24,9 +24,8 @@ impl ByteCompiler<'_> {
                 let rhs = self.register_allocator.alloc();
                 let lhs = self.register_allocator.alloc();
 
-                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
-                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
-
+                self.pop_into_register(&rhs);
+                self.pop_into_register(&lhs);
                 let opcode = match op {
                     ArithmeticOp::Add => Opcode::Add,
                     ArithmeticOp::Sub => Opcode::Sub,
@@ -49,8 +48,8 @@ impl ByteCompiler<'_> {
                 let rhs = self.register_allocator.alloc();
                 let lhs = self.register_allocator.alloc();
 
-                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
-                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
+                self.pop_into_register(&rhs);
+                self.pop_into_register(&lhs);
                 let opcode = match op {
                     BitwiseOp::And => Opcode::BitAnd,
                     BitwiseOp::Or => Opcode::BitOr,
@@ -73,8 +72,8 @@ impl ByteCompiler<'_> {
                 let rhs = self.register_allocator.alloc();
                 let lhs = self.register_allocator.alloc();
 
-                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(rhs.index())]);
-                self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(lhs.index())]);
+                self.pop_into_register(&rhs);
+                self.pop_into_register(&lhs);
                 let opcode = match op {
                     RelationalOp::Equal => Opcode::Eq,
                     RelationalOp::NotEqual => Opcode::NotEq,

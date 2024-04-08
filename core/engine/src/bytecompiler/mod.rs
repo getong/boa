@@ -648,6 +648,15 @@ impl<'ctx> ByteCompiler<'ctx> {
         }
     }
 
+    /// TODO: Temporary function, remove once transition is complete.
+    fn pop_into_register(&mut self, dst: &Reg) {
+        self.emit2(Opcode::PopIntoRegister, &[Operand2::Varying(dst.index())]);
+    }
+    /// TODO: Temporary function, remove once transition is complete.
+    fn push_from_register(&mut self, src: &Reg) {
+        self.emit2(Opcode::PushFromRegister, &[Operand2::Varying(src.index())]);
+    }
+
     /// Emits an opcode with one varying operand.
     ///
     /// Simpler version of [`ByteCompiler::emit()`].

@@ -98,7 +98,7 @@ impl ByteCompiler<'_> {
                 let mut output = Operand2::Varying(reg.index());
                 let use_register = self.compile_binary(binary, &mut output, use_expr);
                 if use_register {
-                    self.emit2(Opcode::PushFromRegister, &[Operand2::Varying(reg.index())]);
+                    self.push_from_register(&reg);
                 }
                 self.register_allocator.dealloc(reg);
             }
