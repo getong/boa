@@ -868,6 +868,16 @@ impl<'ctx> ByteCompiler<'ctx> {
         Label { index }
     }
 
+    pub(crate) fn emit_push_private_environment(&mut self, class: &Reg) -> Label {
+        self.emit2(
+            Opcode::PushPrivateEnvironment,
+            &[Operand2::Varying(class.index())],
+        );
+        let index = self.next_opcode_location();
+        self.emit_u32(Self::DUMMY_ADDRESS);
+        Label { index: index - 1 }
+    }
+
     /// Emit an opcode with two dummy operands.
     /// Return the `Label`s of the two operands.
     pub(crate) fn emit_opcode_with_two_operands(&mut self, opcode: Opcode) -> (Label, Label) {

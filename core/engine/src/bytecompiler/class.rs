@@ -96,25 +96,47 @@ impl ByteCompiler<'_> {
         let code = Gc::new(compiler.finish());
         let index = self.push_function_to_constants(code);
 
-        let dst = self.register_allocator.alloc();
+        let class_register = self.register_allocator.alloc();
         self.emit2(
             Opcode::GetFunction,
-            &[Operand2::Varying(dst.index()), Operand2::Varying(index)],
+            &[
+                Operand2::Varying(class_register.index()),
+                Operand2::Varying(index),
+            ],
         );
-        self.push_from_register(&dst);
-        self.register_allocator.dealloc(dst);
 
-        self.emit_opcode(Opcode::Dup);
+        let prototype_register = self.register_allocator.alloc();
+
         if let Some(node) = class.super_ref() {
             self.compile_expr(node, true);
-            self.emit_opcode(Opcode::PushClassPrototype);
+            self.pop_into_register(&prototype_register);
+
+            self.emit2(
+                Opcode::PushClassPrototype,
+                &[
+                    Operand2::Varying(prototype_register.index()),
+                    Operand2::Varying(class_register.index()),
+                    Operand2::Varying(prototype_register.index()),
+                ],
+            );
         } else {
             self.emit_opcode(Opcode::PushUndefined);
+            self.pop_into_register(&prototype_register);
         }
-        self.emit_opcode(Opcode::SetClassPrototype);
-        self.emit_opcode(Opcode::Swap);
 
-        let count_label = self.emit_opcode_with_operand(Opcode::PushPrivateEnvironment);
+        let proto_register = self.register_allocator.alloc();
+
+        self.emit2(
+            Opcode::SetClassPrototype,
+            &[
+                Operand2::Varying(proto_register.index()),
+                Operand2::Varying(prototype_register.index()),
+                Operand2::Varying(class_register.index()),
+            ],
+        );
+        self.register_allocator.dealloc(prototype_register);
+
+        let count_label = self.emit_push_private_environment(&class_register);
         let mut count = 0;
         for element in class.elements() {
             match element {
@@ -135,9 +157,15 @@ impl ByteCompiler<'_> {
         let mut static_field_name_count = 0;
 
         if old_lex_env.is_some() {
-            self.emit_opcode(Opcode::Dup);
+            self.push_from_register(&class_register);
             self.emit_binding(BindingOpcode::InitLexical, class_name.clone());
         }
+
+        self.push_from_register(&proto_register);
+        self.push_from_register(&class_register);
+
+        self.register_allocator.dealloc(proto_register);
+        self.register_allocator.dealloc(class_register);
 
         // TODO: set function name for getter and setters
         for element in class.elements() {

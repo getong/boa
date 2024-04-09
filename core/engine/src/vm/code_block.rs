@@ -539,7 +539,10 @@ impl CodeBlock {
                     slot.attributes,
                 )
             }
-            Instruction::PushPrivateEnvironment { name_indices } => {
+            Instruction::PushPrivateEnvironment {
+                class: _,
+                name_indices,
+            } => {
                 format!("{name_indices:?}")
             }
             Instruction::JumpTable { default, addresses } => {

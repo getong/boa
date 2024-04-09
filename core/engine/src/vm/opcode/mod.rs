@@ -2068,7 +2068,7 @@ generate_opcodes! {
     /// Operands: count: `u32`, count * name_index: `u32`
     ///
     /// Stack: class **=>** class
-    PushPrivateEnvironment { name_indices: ThinVec<u32> },
+    PushPrivateEnvironment { class: VaryingOperand, name_indices: ThinVec<u32> },
 
     /// Pop a private environment.
     ///
