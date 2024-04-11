@@ -1029,33 +1029,22 @@ generate_opcodes! {
     /// Stack: value **=>** (-value)
     Neg,
 
+    /// Convert value at register `src` to numeric and puts it in register `dst`.
+    ToNumeric { dst: VaryingOperand, src: VaryingOperand },
+
     /// Unary `++` operator.
     ///
     /// Operands:
     ///
     /// Stack: value **=>** (value + 1)
-    Inc,
-
-    /// Unary postfix `++` operator.
-    ///
-    /// Operands:
-    ///
-    /// Stack: value **=>** (ToNumeric(value)), (value + 1)
-    IncPost,
+    Inc { dst: VaryingOperand, src: VaryingOperand },
 
     /// Unary `--` operator.
     ///
     /// Operands:
     ///
     /// Stack: value **=>** (value - 1)
-    Dec,
-
-    /// Unary postfix `--` operator.
-    ///
-    /// Operands:
-    ///
-    /// Stack: value **=>** (ToNumeric(value)), (value - 1)
-    DecPost,
+    Dec { dst: VaryingOperand, src: VaryingOperand },
 
     /// Declare `var` type variable.
     ///
@@ -1149,7 +1138,12 @@ generate_opcodes! {
     /// Operands: index: `u32`
     ///
     /// Stack: object, receiver **=>** value
-    GetPropertyByName { index: VaryingOperand },
+    GetPropertyByName {
+        dst: VaryingOperand,
+        receiver: VaryingOperand,
+        value: VaryingOperand,
+        index: VaryingOperand
+    },
 
     /// Get a property by value from an object an push it on the stack.
     ///
@@ -2235,6 +2229,8 @@ generate_opcodes! {
     Reserved53 => Reserved,
     /// Reserved [`Opcode`].
     Reserved54 => Reserved,
+    /// Reserved [`Opcode`].
+    Reserved55 => Reserved,
 }
 
 /// Specific opcodes for bindings.

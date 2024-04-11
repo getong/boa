@@ -393,7 +393,10 @@ impl CodeBlock {
             | Instruction::InstanceOf { .. }
             | Instruction::StrictNotEq { .. }
             | Instruction::StrictEq { .. }
-            | Instruction::InPrivate { .. } => "TODO: fix".to_string(),
+            | Instruction::InPrivate { .. }
+            | Instruction::Inc { .. }
+            | Instruction::Dec { .. }
+            | Instruction::ToNumeric { .. } => "TODO: fix".to_string(),
             Instruction::PopIntoRegister { dst } => format!("R{}", dst.value()),
             Instruction::PushFromRegister { src } => format!("R{}", src.value()),
             Instruction::Move { dst: r1, src: r2 } => {
@@ -527,7 +530,8 @@ impl CodeBlock {
                         .to_std_string_escaped(),
                 )
             }
-            Instruction::GetPropertyByName { index } | Instruction::SetPropertyByName { index } => {
+            Instruction::GetPropertyByName { index, .. }
+            | Instruction::SetPropertyByName { index } => {
                 let ic = &self.ic[index.value() as usize];
                 let slot = ic.slot();
                 format!(
@@ -588,10 +592,6 @@ impl CodeBlock {
             | Instruction::LogicalNot
             | Instruction::Pos
             | Instruction::Neg
-            | Instruction::Inc
-            | Instruction::IncPost
-            | Instruction::Dec
-            | Instruction::DecPost
             | Instruction::GetPropertyByValue
             | Instruction::GetPropertyByValuePush
             | Instruction::SetPropertyByValue
@@ -722,7 +722,8 @@ impl CodeBlock {
             | Instruction::Reserved51
             | Instruction::Reserved52
             | Instruction::Reserved53
-            | Instruction::Reserved54 => unreachable!("Reserved opcodes are unrechable"),
+            | Instruction::Reserved54
+            | Instruction::Reserved55 => unreachable!("Reserved opcodes are unrechable"),
         }
     }
 }

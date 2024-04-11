@@ -66,7 +66,10 @@ impl CodeBlock {
                 | Instruction::LessThanOrEq { .. }
                 | Instruction::InstanceOf { .. }
                 | Instruction::SetAccumulator { .. }
-                | Instruction::SetFunctionName { .. } => {
+                | Instruction::SetFunctionName { .. }
+                | Instruction::ToNumeric { .. }
+                | Instruction::Inc { .. }
+                | Instruction::Dec { .. } => {
                     graph.add_node(previous_pc, NodeShape::None, label.into(), Color::None);
                     graph.add_edge(previous_pc, pc, None, Color::None, EdgeStyle::Line);
                 }
@@ -380,10 +383,6 @@ impl CodeBlock {
                 | Instruction::LogicalNot
                 | Instruction::Pos
                 | Instruction::Neg
-                | Instruction::Inc
-                | Instruction::IncPost
-                | Instruction::Dec
-                | Instruction::DecPost
                 | Instruction::GetPropertyByValue
                 | Instruction::GetPropertyByValuePush
                 | Instruction::SetPropertyByValue
@@ -516,7 +515,8 @@ impl CodeBlock {
                 | Instruction::Reserved51
                 | Instruction::Reserved52
                 | Instruction::Reserved53
-                | Instruction::Reserved54 => unreachable!("Reserved opcodes are unrechable"),
+                | Instruction::Reserved54
+                | Instruction::Reserved55 => unreachable!("Reserved opcodes are unrechable"),
             }
         }
 

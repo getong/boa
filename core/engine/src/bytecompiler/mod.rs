@@ -698,6 +698,23 @@ impl<'ctx> ByteCompiler<'ctx> {
         self.emit_u64(value as u64);
     }
     fn emit_get_property_by_name(&mut self, ident: Sym) {
+        let dst = self.register_allocator.alloc();
+        let receiver = self.register_allocator.alloc();
+        let value = self.register_allocator.alloc();
+
+        self.pop_into_register(&receiver);
+        self.pop_into_register(&value);
+
+        self.emit_get_property_by_name2(&dst, &receiver, &value, ident);
+
+        self.push_from_register(&dst);
+
+        self.register_allocator.dealloc(dst);
+        self.register_allocator.dealloc(receiver);
+        self.register_allocator.dealloc(value);
+    }
+
+    fn emit_get_property_by_name2(&mut self, dst: &Reg, receiver: &Reg, value: &Reg, ident: Sym) {
         let ic_index = self.ic.len() as u32;
 
         let name_index = self.get_or_insert_name(Identifier::new(ident));
@@ -706,7 +723,15 @@ impl<'ctx> ByteCompiler<'ctx> {
         };
         self.ic.push(InlineCache::new(name.clone()));
 
-        self.emit_with_varying_operand(Opcode::GetPropertyByName, ic_index);
+        self.emit2(
+            Opcode::GetPropertyByName,
+            &[
+                Operand2::Varying(dst.index()),
+                Operand2::Varying(receiver.index()),
+                Operand2::Varying(value.index()),
+                Operand2::Varying(ic_index),
+            ],
+        );
     }
 
     fn emit_set_property_by_name(&mut self, ident: Sym) {
